@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const app = express();
 app.use(cors());
@@ -27,7 +26,7 @@ app.post('/airtable', async (req, res) => {
   };
 
   try {
-    const response = await fetch(\`\${WEBHOOK_CONFIG.makecom.baseUrl}/\${WEBHOOK_CONFIG.makecom.defaultWebhookId}\`, {
+    const response = await fetch(`${WEBHOOK_CONFIG.makecom.baseUrl}/${WEBHOOK_CONFIG.makecom.defaultWebhookId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -42,5 +41,4 @@ app.post('/airtable', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(\`Relay server running on port \${PORT}\`);
-});
+  console.log(`Relay server running on port ${PORT}`);
