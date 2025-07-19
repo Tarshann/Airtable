@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const fetch = require('node-fetch'); // CommonJS-compatible fetch
 
 const app = express();
 app.use(cors());
@@ -42,3 +43,4 @@ app.post('/airtable', async (req, res) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Relay server running on port ${PORT}`);
+});
