@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airtable Webhook Relay Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .section h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.online {
+            background: #28a745;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .preset-btn {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            color: #495057;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .preset-btn:hover {
+            background: linear-gradient(135deg, #dee2e6, #ced4da);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .send-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        }
+        
+        .send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-box {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid;
+            display: none;
+        }
+        
+        .status-box.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .status-box.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .status-box.loading {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .response-data {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        .quick-actions {
+            grid-column: 1 / -1;
+            background: #e8f5e8;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .quick-actions h3 {
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .action-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-box {
+            grid-column: 1 / -1;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Airtable Webhook Relay</h1>
+            <p>Send data to Airtable via Make.com webhooks through your local relay server</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="info-box">
+                <h4>💡 How This Works</h4>
+                <p>Your relay server (localhost:3001) forwards requests to Make.com webhooks, bypassing browser CORS restrictions. Data flows: Browser → Relay → Make.com → Airtable</p>
+            </div>
+            
+            <div class="section">
+                <h3>
+                    <span class="status-indicator" id="serverStatus"></span>
+                    Server Configuration
+                </h3>
+                
+                <div class="input-group">
+                    <label for="relayUrl">Relay Server URL:</label>
+                    <input type="text" id="relayUrl" value="http://localhost:3001">
+                </div>
+                
+                <div class="input-group">
+                    <label for="webhookId">Webhook ID:</label>
+                    <input type="text" id="webhookId" value="ljynvsqjkzmhwm1gdjlmnkeytim5xdl8">
+                </div>
+                
+                <button onclick="checkServerHealth()" class="action-btn" style="width: 100%;">
+                    🔍 Check Server Status
+                </button>
+            </div>
+            
+            <div class="section">
+                <h3>📝 Data Configuration</h3>
+                
+                <div class="input-group">
+                    <label for="tableName">Table Name:</label>
+                    <input type="text" id="tableName" value="Content">
+                </div>
+                
+                <div class="input-group">
+                    <label for="overwriteMode">Mode:</label>
+                    <select id="overwriteMode">
+                        <option value="false">Append (Add to existing data)</option>
+                        <option value="true">Overwrite (Replace all data)</option>
+                    </select>
+                </div>
+                
+                <div class="preset-grid">
+                    <button class="preset-btn" onclick="loadPreset('single')">
+                        📄 Single Record
+                    </button>
+                    <button class="preset-btn" onclick="loadPreset('multiple')">
+                        📚 Multiple Records
+                    </button>
+                    <button class="preset-btn" onclick="loadPreset('instagram')">
+                        📸 Instagram Posts
+                    </button>
+                    <button class="preset-btn" onclick="loadPreset('tiktok')">
+                        🎵 TikTok Content
+                    </button>
+                </div>
+            </div>
+            
+            <div class="section" style="grid-column: 1 / -1;">
+                <h3>📋 JSON Data</h3>
+                
+                <div class="input-group">
+                    <label for="jsonData">Records JSON:</label>
+                    <textarea id="jsonData" rows="10" placeholder="Records will appear here when you select a preset..."></textarea>
+                </div>
+                
+                <button class="send-btn" id="sendBtn" onclick="sendData()">
+                    🚀 Send to Airtable
+                </button>
+                
+                <div id="statusBox" class="status-box"></div>
+            </div>
+            
+            <div class="quick-actions">
+                <h3>⚡ Quick Actions</h3>
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="sendQuickTest()">🧪 Send Test Record</button>
+                    <button class="action-btn" onclick="clearData()">🗑️ Clear Data</button>
+                    <button class="action-btn" onclick="viewLogs()">📊 View Server Logs</button>
+                    <button class="action-btn" onclick="copyConfig()">📋 Copy Config</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Preset data templates
+        const presets = {
+            single: [
+                {
+                    Name: "Sample Post",
+                    Channel: "TikTok", 
+                    Date: "2025-07-21",
+                    Status: "Draft"
+                }
+            ],
+            multiple: [
+                {
+                    Name: "Morning Motivation",
+                    Channel: "Instagram",
+                    Date: "2025-07-21",
+                    Status: "Scheduled"
+                },
+                {
+                    Name: "Tutorial Tuesday",
+                    Channel: "TikTok",
+                    Date: "2025-07-22",
+                    Status: "Draft"
+                },
+                {
+                    Name: "Behind the Scenes",
+                    Channel: "Instagram",
+                    Date: "2025-07-23",
+                    Status: "Posted"
+                }
+            ],
+            instagram: [
+                {
+                    Name: "Feed Post #1",
+                    Channel: "Instagram",
+                    Date: "2025-07-20",
+                    Status: "Draft"
+                },
+                {
+                    Name: "Story Highlight",
+                    Channel: "Instagram",
+                    Date: "2025-07-21",
+                    Status: "Scheduled"
+                },
+                {
+                    Name: "Reel Content",
+                    Channel: "Instagram",
+                    Date: "2025-07-22",
+                    Status: "Posted"
+                }
+            ],
+            tiktok: [
+                {
+                    Name: "Trending Sound Video",
+                    Channel: "TikTok",
+                    Date: "2025-07-20",
+                    Status: "Draft"
+                },
+                {
+                    Name: "Tutorial Video",
+                    Channel: "TikTok",
+                    Date: "2025-07-21",
+                    Status: "Scheduled"
+                },
+                {
+                    Name: "Comedy Skit",
+                    Channel: "TikTok",
+                    Date: "2025-07-22",
+                    Status: "Posted"
+                }
+            ]
+        };
+
+        // Load preset data
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            if (preset) {
+                document.getElementById('jsonData').value = JSON.stringify(preset, null, 2);
+            }
+        }
+
+        // Check server health
+        async function checkServerHealth() {
+            const relayUrl = document.getElementById('relayUrl').value.trim();
+            const statusIndicator = document.getElementById('serverStatus');
+            
+            try {
+                statusIndicator.className = 'status-indicator';
+                const response = await fetch(`${relayUrl}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusIndicator.className = 'status-indicator online';
+                    showStatus('success', `✅ Server Online: ${data.server}`, JSON.stringify(data, null, 2));
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                statusIndicator.className = 'status-indicator';
+                showStatus('error', `❌ Server Offline: ${error.message}`, 'Make sure your relay server is running on localhost:3001');
+            }
+        }
+
+        // Send data to Airtable
+        async function sendData() {
+            const relayUrl = document.getElementById('relayUrl').value.trim();
+            const webhookId = document.getElementById('webhookId').value.trim();
+            const tableName = document.getElementById('tableName').value.trim();
+            const overwrite = document.getElementById('overwriteMode').value === 'true';
+            const jsonDataText = document.getElementById('jsonData').value.trim();
+            const sendBtn = document.getElementById('sendBtn');
+
+            // Validation
+            if (!relayUrl || !tableName || !jsonDataText) {
+                showStatus('error', '❌ Missing required fields', 'Please fill in all fields');
+                return;
+            }
+
+            let records;
+            try {
+                records = JSON.parse(jsonDataText);
+            } catch (error) {
+                showStatus('error', '❌ Invalid JSON', `JSON parsing error: ${error.message}`);
+                return;
+            }
+
+            // Prepare payload
+            const payload = {
+                table: tableName,
+                overwrite: overwrite,
+                records: records
+            };
+
+            if (webhookId) {
+                payload.webhookId = webhookId;
+            }
+
+            // Send request
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '⏳ Sending...';
+            showStatus('loading', '⏳ Sending data to relay server...', 'Processing your request...');
+
+            try {
+                const response = await fetch(`${relayUrl}/airtable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    sendBtn.innerHTML = '✅ Success!';
+                    showStatus('success', 
+                        `🎉 Data sent successfully! ${result.recordsProcessed} record(s) processed`, 
+                        JSON.stringify(result, null, 2)
+                    );
+                    setTimeout(() => {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = '🚀 Send to Airtable';
+                    }, 3000);
+                } else {
+                    throw new Error(result.error || `HTTP ${response.status}`);
+                }
+            } catch (error) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '🔄 Retry';
+                showStatus('error', `❌ Send failed: ${error.message}`, 'Check server status and try again');
+            }
+        }
+
+        // Quick test function
+        async function sendQuickTest() {
+            const testRecord = [{
+                Name: `Quick Test ${new Date().toLocaleTimeString()}`,
+                Channel: "Instagram",
+                Date: new Date().toISOString().split('T')[0],
+                Status: "Draft"
+            }];
+            
+            document.getElementById('jsonData').value = JSON.stringify(testRecord, null, 2);
+            await sendData();
+        }
+
+        // Clear data
+        function clearData() {
+            document.getElementById('jsonData').value = '';
+            showStatus('success', '🗑️ Data cleared', 'Ready for new input');
+        }
+
+        // View logs reminder
+        function viewLogs() {
+            showStatus('success', '📊 Check your relay server terminal', 'All request logs appear in the terminal where you started the server');
+        }
+
+        // Copy configuration
+        function copyConfig() {
+            const config = {
+                relayUrl: document.getElementById('relayUrl').value,
+                webhookId: document.getElementById('webhookId').value,
+                tableName: document.getElementById('tableName').value
+            };
+            
+            navigator.clipboard.writeText(JSON.stringify(config, null, 2)).then(() => {
+                showStatus('success', '📋 Configuration copied', 'Config copied to clipboard');
+            });
+        }
+
+        // Show status message
+        function showStatus(type, message, details) {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.style.display = 'block';
+            
+            statusBox.innerHTML = `
+                <strong>${message}</strong>
+                ${details ? `<div class="response-data">${details}</div>` : ''}
+            `;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPreset('single');
+            checkServerHealth();
+        });
+    </script>
+</body>
+</html>
