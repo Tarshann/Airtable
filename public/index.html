@@ -264,6 +264,18 @@
             line-height: 1.6;
         }
         
+        .deployment-info {
+            background: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .deployment-info strong {
+            color: #155724;
+        }
+        
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -280,13 +292,12 @@
     <div class="container">
         <div class="header">
             <h1>🔄 Airtable Webhook Relay</h1>
-            <p>Send data to Airtable via Make.com webhooks through your local relay server</p>
+            <p>Send data to Airtable via Make.com webhooks through your Railway-deployed relay server</p>
         </div>
         
         <div class="main-content">
-            <div class="info-box">
-                <h4>💡 How This Works</h4>
-                <p>Your relay server (localhost:3001) forwards requests to Make.com webhooks, bypassing browser CORS restrictions. Data flows: Browser → Relay → Make.com → Airtable</p>
+            <div class="deployment-info">
+                <strong>✅ Deployed on Railway!</strong> This web client is now served directly from your relay server. No need for separate hosting!
             </div>
             
             <div class="section">
@@ -297,7 +308,8 @@
                 
                 <div class="input-group">
                     <label for="relayUrl">Relay Server URL:</label>
-                    <input type="text" id="relayUrl" value="http://localhost:3001">
+                    <input type="text" id="relayUrl" value="" readonly style="background: #f8f9fa;">
+                    <small style="color: #6c757d;">Automatically set to current domain</small>
                 </div>
                 
                 <div class="input-group">
@@ -362,7 +374,7 @@
                 <div class="action-buttons">
                     <button class="action-btn" onclick="sendQuickTest()">🧪 Send Test Record</button>
                     <button class="action-btn" onclick="clearData()">🗑️ Clear Data</button>
-                    <button class="action-btn" onclick="viewLogs()">📊 View Server Logs</button>
+                    <button class="action-btn" onclick="viewCurrentUrl()">🌐 Show Current URL</button>
                     <button class="action-btn" onclick="copyConfig()">📋 Copy Config</button>
                 </div>
             </div>
@@ -370,13 +382,16 @@
     </div>
 
     <script>
+        // Auto-detect current domain for relay URL
+        const currentOrigin = window.location.origin;
+        
         // Preset data templates
         const presets = {
             single: [
                 {
                     Name: "Sample Post",
-                    Channel: "TikTok", 
-                    Date: "2025-07-21",
+                    Channel: "Instagram",
+                    Date: "2025-07-20",
                     Status: "Draft"
                 }
             ],
@@ -468,7 +483,7 @@
                 }
             } catch (error) {
                 statusIndicator.className = 'status-indicator';
-                showStatus('error', `❌ Server Offline: ${error.message}`, 'Make sure your relay server is running on localhost:3001');
+                showStatus('error', `❌ Server Offline: ${error.message}`, 'Check server deployment status');
             }
         }
 
@@ -561,9 +576,9 @@
             showStatus('success', '🗑️ Data cleared', 'Ready for new input');
         }
 
-        // View logs reminder
-        function viewLogs() {
-            showStatus('success', '📊 Check your relay server terminal', 'All request logs appear in the terminal where you started the server');
+        // Show current URL
+        function viewCurrentUrl() {
+            showStatus('success', `🌐 Current URL: ${currentOrigin}`, `You can bookmark this URL: ${currentOrigin}`);
         }
 
         // Copy configuration
@@ -593,6 +608,9 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            // Set relay URL to current origin
+            document.getElementById('relayUrl').value = currentOrigin;
+            
             loadPreset('single');
             checkServerHealth();
         });
